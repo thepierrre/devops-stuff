@@ -1,40 +1,63 @@
+# For each image build to work, checkout the branch 'feature/devops-config' in the frontend and backend repositories.
+
 services:
+
   frontend:
     build:
       context: ../workout-tracker-project/wrk-tracker-frontend
     image: frontend:latest
     ports:
-    - 5173:5173
+      - 5173:5173
     networks:
-    - back-tier
+      - default
 
   backend:
+    depends_on:
+      - db
     build:
       context: ../workout-tracker-project/wrk-tracker-backend
     image: backend:latest
     ports:
-    - 8080:8080
+      - 8080:8080
     environment:
-    - SPRING_PROFILES_ACTIVE=sandbox
-    - DUMMYUSER_PASSWORD=strongpassword
+      - SPRING_PROFILES_ACTIVE=sandbox
+      - POSTGRES_USER=thepierrre
+    secrets:
+      - dummyuser_pwd
+      - postgres_pwd
     networks:
-    - back-tier
+      - default
+    entrypoint: sh -c "
+      export POSTGRES_PASSWORD=$(cat /run/secrets/postgres_pwd) &&
+      export DUMMYUSER_PASSWORD=$(cat /run/secrets/dummyuser_pwd) &&
+      java -jar workout-tracker-service.jar
+      "
 
   db:
     image: postgres:14-alpine
     ports:
-    - 5432:5432
+      - 5432:5432
     volumes:
-    - db-data:/var/lib/postgresql/data
+      - db-data:/var/lib/postgresql/data
+      - ./scripts/db-entrypoint.sh:/docker-entrypoint-initdb.d/init.sh
     environment:
-    - POSTGRES_PASSWORD=pwd123
-    - POSTGRES_USER=thepierrre
-    - POSTGRES_DB=my_gym_db
+      - POSTGRES_DB=my_gym_db
+      - POSTGRES_USER=thepierrre
+    secrets:
+      - postgres_pwd
     networks:
-    - back-tier
+      - default
+    entrypoint:
+      - docker-entrypoint-initdb.d/init.sh
 
 volumes:
   db-data: {}
 
 networks:
-  back-tier: {}
+  default: {}
+
+secrets:
+  dummyuser_pwd:
+    file: ./secrets/dummyuser-password.txt
+  postgres_pwd:
+    file: ./secrets/postgres-password.txt
