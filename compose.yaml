@@ -1,0 +1,40 @@
+services:
+  frontend:
+    build:
+      context: ../workout-tracker-project/wrk-tracker-frontend
+    image: frontend:latest
+    ports:
+    - 5173:5173
+    networks:
+    - back-tier
+
+  backend:
+    build:
+      context: ../workout-tracker-project/wrk-tracker-backend
+    image: backend:latest
+    ports:
+    - 8080:8080
+    environment:
+    - SPRING_PROFILES_ACTIVE=sandbox
+    - DUMMYUSER_PASSWORD=strongpassword
+    networks:
+    - back-tier
+
+  db:
+    image: postgres:14-alpine
+    ports:
+    - 5432:5432
+    volumes:
+    - db-data:/var/lib/postgresql/data
+    environment:
+    - POSTGRES_PASSWORD=pwd123
+    - POSTGRES_USER=thepierrre
+    - POSTGRES_DB=my_gym_db
+    networks:
+    - back-tier
+
+volumes:
+  db-data: {}
+
+networks:
+  back-tier: {}
